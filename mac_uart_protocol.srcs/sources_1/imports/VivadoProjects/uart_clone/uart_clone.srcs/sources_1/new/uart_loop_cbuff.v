@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../imports/rtl/uart_regs_defs.v"
+`include "./uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -59,9 +59,14 @@ module uart_loop_cbuff(
     localparam PHASE_STATE_BIT_NUM_GET_CONFIG_STATUS = 1'b1;
     localparam PHASE_STATE_BIT_NUM_GET_UART_STATUS = 2'd2;
     localparam PHASE_STATE_BIT_NUM_READ_UART_DATA = 2'd3;
-
+    
+    localparam PHASE_STAGE_INIT = 1'b0;
+    localparam PHASE_STAGE_TRIGGER = 1'b1;
+    localparam PHASE_STAGE_END = 2'd2;
+    
     reg [PHASE_STATE_LENGTH-1:0] phase_state_cnt;
-
+    reg [PHASE_STAGE_LENGTH:0] phase_stage;
+    
     always @(
         posedge clk_i or posedge rst_i
     ) begin
@@ -75,21 +80,20 @@ module uart_loop_cbuff(
                 phase_state_cnt <= phase_state_cnt + 1'b1;
         end
     end
-    
-    reg [PHASE_STAGE_LENGTH:0] phase_stage;
-
-    localparam PHASE_STAGE_INIT = 1'b0;
-    localparam PHASE_STAGE_TRIGGER = 1'b1;
-    localparam PHASE_STAGE_END = 2'd2;
 
     always @(
         posedge clk_i or posedge rst_i
     ) begin
-        if (rst_i || (phase_stage == PHASE_STAGE_END)) begin
+        if (rst_i) begin
             phase_stage <= PHASE_STAGE_INIT;
-        end else if (phase_stage == PHASE_STAGE_INIT) begin
+        end
+        else if (phase_stage == PHASE_STAGE_END) begin
+            phase_stage <= PHASE_STAGE_INIT;
+        end
+        else if (phase_stage == PHASE_STAGE_INIT) begin
             phase_stage <= PHASE_STAGE_TRIGGER;
-        end else if ((phase_stage == PHASE_STAGE_TRIGGER) && phase_is_end[phase_state_cnt]) begin
+        end
+        else if ((phase_stage == PHASE_STAGE_TRIGGER) && phase_is_end[phase_state_cnt]) begin
             phase_stage <= PHASE_STAGE_END;
         end
     end
@@ -99,7 +103,9 @@ module uart_loop_cbuff(
     always @(
         posedge clk_i or posedge rst_i
     ) begin
-        if (rst_i || (phase_stage == PHASE_STAGE_INIT))
+        if (rst_i)
+            phase_cnt <= 1'b0;
+        else if (phase_stage == PHASE_STAGE_INIT)
             phase_cnt <= 1'b0;
         else if (phase_cnt_start_to_count)
             phase_cnt <= phase_cnt + 1'b1;  
@@ -141,7 +147,7 @@ module uart_loop_cbuff(
                     we_i <= 1'b1;
                     stb_i <= 1'b1;
                     addr_i <= `UART_CFG;
-                    data_i = {12'b0, DEFAULT_UART_CFG};
+                    data_i <= {12'b0, DEFAULT_UART_CFG};
                 end else if (is_ack_o_or_cnt_full) begin
                     phase_is_end[PHASE_STATE_BIT_NUM_INIT] <= 1'b1;
                     we_i <= 1'b0;

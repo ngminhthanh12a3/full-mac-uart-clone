@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../imports/rtl/uart_regs_defs.v"
+`include "./uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -68,6 +68,30 @@ module top_cbuff_v2(
     wire uart_inst_stb_i = is_default_config_ok ? top_uart_stb_i : uart_loop_stb_i;
     wire uart_inst_uart_tx_busy_o;
 
+    // read tx data from fifo
+    reg uart_tx_fifo_rd_cplt;
+    
+    // uart_tx_fifo
+    reg [7:0] uart_tx_fifo_wdata_i;
+    reg uart_tx_fifo_wr_en_i, uart_tx_fifo_rd_en_i;
+    wire uart_tx_fifo_full_o, uart_tx_fifo_empty_o;
+    wire [7:0] uart_tx_fifo_rdata_o;
+
+    //
+    // reg [7:0] uart_tx_fifo_wdata_i;
+    reg uart_tx_fifo_wr_cplt;
+    
+    // 
+    // controller_inst
+    reg [7:0] controller_inst_data_i;
+    reg controller_inst_we_i, controller_inst_data_in_cplt;
+    wire controller_inst_finish_o, controller_inst_error_o;
+    wire [7:0] controller_inst_cmd, controller_inst_data_len_i;
+    wire controller_inst_ack_data_rd_i;
+    
+    reg commander_inst_tx_mem_rd_cplt;
+    reg [7:0] commander_inst_tx_mem_data_reg;
+    
     uart_loop_cbuff uart_loop_cbuff_inst (
         .CLK100MHZ(CLK100MHZ),
         .btn(btn),
@@ -220,14 +244,7 @@ module top_cbuff_v2(
     end
 
     //
-    reg [7:0] uart_tx_fifo_wdata_i;
-    reg uart_tx_fifo_wr_en_i, uart_tx_fifo_rd_en_i;
-    wire uart_tx_fifo_full_o, uart_tx_fifo_empty_o;
-    wire [7:0] uart_tx_fifo_rdata_o;
-
-    //
-    // reg [7:0] uart_tx_fifo_wdata_i;
-    reg uart_tx_fifo_wr_cplt;
+    // uart_tx_fifo
 
     fifo #(
         .WIDTH(8),
@@ -280,7 +297,6 @@ module top_cbuff_v2(
 
     //
     // read tx data from fifo
-    reg uart_tx_fifo_rd_cplt;
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
@@ -297,13 +313,7 @@ module top_cbuff_v2(
     end
 
     //
-    // 
-
-    reg [7:0] controller_inst_data_i;
-    reg controller_inst_we_i, controller_inst_data_in_cplt;
-    wire controller_inst_finish_o, controller_inst_error_o;
-    wire [7:0] controller_inst_cmd, controller_inst_data_len_i;
-    wire controller_inst_ack_data_rd_i;
+    
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             controller_inst_we_i <= 1'b0;
@@ -374,8 +384,7 @@ module top_cbuff_v2(
         .input_data_bus_o(commander_input_data_bus_o)
     );
 
-    reg commander_inst_tx_mem_rd_cplt;
-    reg [7:0] commander_inst_tx_mem_data_reg;
+    
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             commander_inst_tx_mem_rd_cplt <= 1'b0;

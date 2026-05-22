@@ -34,7 +34,11 @@ module top_uart_mac_protocol(
 
     output uart_rxd_out;
     output [3:0] led;
-
+    
+    // mac_unit
+    wire [15:0] mac_out;
+    wire mac_error;
+    
     // wire clk_i = CLK100MHZ, rst_i = btn[0];
     wire [64:0] commander_input_data_bus_o;
     wire [16:0] commander_output_data_bus_i = {mac_error, mac_out};
@@ -49,8 +53,6 @@ module top_uart_mac_protocol(
         .commander_output_data_bus_i(commander_output_data_bus_i)
     );
 
-    wire [15:0] mac_out;
-    wire mac_error;
     mac_unit mac_unit_inst (
         // .in_a(commander_input_data_bus_o[15:0]),
         // .in_b(commander_input_data_bus_o[31:16]),

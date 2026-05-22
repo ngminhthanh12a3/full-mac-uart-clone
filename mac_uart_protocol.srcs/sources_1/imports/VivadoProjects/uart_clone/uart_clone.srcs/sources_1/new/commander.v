@@ -73,6 +73,15 @@ module commander(
     reg [7:0] resp_data_len;
 
     integer j;
+    // tx_fifo
+    reg tx_mem_wait_for_data, tx_mem_drive_data_in, tx_mem_drive_data_cplt;
+    reg [9:0] tx_mem_data_cnt;
+
+    reg [7:0] tx_fifo_wdata_i;
+    // reg tx_fifo_wr_en_i;
+    wire tx_fifo_full_o, tx_fifo_empty_o;
+    wire [7:0] tx_fifo_rdata_o;
+    
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             data_rd_addr_o <= 1'b0;
@@ -124,14 +133,7 @@ module commander(
     end
 
     //
-    // reg [7:0] tx_mem_wr_ptr, tx_mem_rd_ptr;
-    reg tx_mem_wait_for_data, tx_mem_drive_data_in, tx_mem_drive_data_cplt;
-    reg [9:0] tx_mem_data_cnt;
-
-    reg [7:0] tx_fifo_wdata_i;
-    // reg tx_fifo_wr_en_i;
-    wire tx_fifo_full_o, tx_fifo_empty_o;
-    wire [7:0] tx_fifo_rdata_o;
+    // tx_fifo
     
     fifo #(
         .WIDTH(8),
@@ -181,28 +183,9 @@ module commander(
                 tx_fifo_wdata_i <= 8'hcd;
             end
             else if (cmd_i == 8'b0) begin
-                // if (tx_mem_data_cnt == 10'd2) begin
-                //     tx_fifo_wdata_i <= 8'h00;
-                // end
-                // else if (tx_mem_data_cnt == 10'd3) begin
-                //     tx_fifo_wdata_i <= 8'h01;
-                // end
-                // else if (tx_mem_data_cnt == 10'd4) begin
-                //     tx_fifo_wdata_i <= 8'h01;
-                // end
-                // else if (tx_mem_data_cnt == 10'd5) begin
-                //     tx_fifo_wdata_i <= 8'hab;
-                // end
-                // else if (tx_mem_data_cnt == 10'd6) begin
-                //     tx_fifo_wdata_i <= 8'hcd;
-                // end
-                // else if (tx_mem_data_cnt == 10'd7) begin
-                //     tx_mem_drive_data_in <= 1'b0;
-                //     tx_mem_drive_data_cplt <= 1'b1;
-                // end
                 
                 if (tx_mem_data_cnt == 10'd2) begin
-                    tx_fifo_wdata_i <= 8'h01;
+                    tx_fifo_wdata_i <= 8'h00;
                 end
                 else if (tx_mem_data_cnt == 10'd3) begin
                     tx_fifo_wdata_i <= 8'd3;
