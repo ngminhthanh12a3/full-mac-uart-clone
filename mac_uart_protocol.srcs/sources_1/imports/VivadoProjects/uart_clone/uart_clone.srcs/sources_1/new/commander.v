@@ -170,16 +170,22 @@ module commander(
         else if (tx_mem_wait_for_data && interal_data_rd_ready) begin
             tx_mem_wait_for_data <= 1'b0;
             tx_mem_drive_data_in <= 1'b1;
+            tx_mem_data_cnt <= 1'b1;
+
+            // if (tx_mem_data_cnt == 10'b0) begin
+            tx_fifo_wdata_i <= 8'hab;
+                
+            // end
         end
         else if (tx_mem_drive_data_in && ~tx_fifo_full_o) begin
             
             tx_mem_data_cnt <= tx_mem_data_cnt + 1'b1;
 
-            if (tx_mem_data_cnt == 10'b0) begin
-                tx_fifo_wdata_i <= 8'hab;
+            // if (tx_mem_data_cnt == 10'b0) begin
+            //     tx_fifo_wdata_i <= 8'hab;
                 
-            end
-            else if (tx_mem_data_cnt == 10'b1) begin
+            // end
+            if (tx_mem_data_cnt == 10'b1) begin
                 tx_fifo_wdata_i <= 8'hcd;
             end
             else if (cmd_i == 8'b0) begin

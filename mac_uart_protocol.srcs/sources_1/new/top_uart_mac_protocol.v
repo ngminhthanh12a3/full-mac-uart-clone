@@ -20,7 +20,10 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module top_uart_mac_protocol(
+module top_uart_mac_protocol #(
+        parameter DEFAULT_BAURATE_DIVIDENT = 8'hd0
+    )
+    (
     CLK100MHZ,
     btn,
     led,
@@ -42,7 +45,9 @@ module top_uart_mac_protocol(
     // wire clk_i = CLK100MHZ, rst_i = btn[0];
     wire [64:0] commander_input_data_bus_o;
     wire [16:0] commander_output_data_bus_i = {mac_error, mac_out};
-    top_cbuff_v2 top_cbuff_v2_inst (
+    top_cbuff_v2 #(
+        .DEFAULT_BAURATE_DIVIDENT(DEFAULT_BAURATE_DIVIDENT)
+    ) top_cbuff_v2_inst (
         .CLK100MHZ(CLK100MHZ),
         .btn(btn),
         .led(led),

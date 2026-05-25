@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "./uart_regs_defs.v"
+`include "../imports/rtl/uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -21,7 +21,9 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module top_cbuff_v2(
+module top_cbuff_v2 #(
+    parameter DEFAULT_BAURATE_DIVIDENT = 8'hd0
+) (
     CLK100MHZ,
     btn,
     led,
@@ -58,8 +60,9 @@ module top_cbuff_v2(
     wire uart_inst_clk_i = clk_i;
     wire uart_inst_rst_i = rst_i;
     // wire uart_inst_intr_o = ;
-    wire uart_inst_tx_o = uart_rxd_out;
-    wire uart_inst_rx_i = uart_txd_in;
+    wire uart_inst_tx_o;
+    assign uart_rxd_out = uart_inst_tx_o;
+    wire uart_inst_rx_i = is_self_test_ok ? uart_txd_in : 1'b1;
     wire uart_inst_ack_o;
     wire [31:0] uart_inst_data_o;
     wire [7:0] uart_inst_addr_i = is_default_config_ok ? top_uart_addr_i : uart_loop_addr_i;
@@ -69,7 +72,7 @@ module top_cbuff_v2(
     wire uart_inst_uart_tx_busy_o;
 
     // read tx data from fifo
-    reg uart_tx_fifo_rd_cplt;
+    reg uart_tx_fifo_rd_cplt, uart_tx_fifo_rd_wait_for_cplt;
     
     // uart_tx_fifo
     reg [7:0] uart_tx_fifo_wdata_i;
@@ -92,7 +95,9 @@ module top_cbuff_v2(
     reg commander_inst_tx_mem_rd_cplt;
     reg [7:0] commander_inst_tx_mem_data_reg;
     
-    uart_loop_cbuff uart_loop_cbuff_inst (
+    uart_loop_cbuff #(
+        .DEFAULT_BAURATE_DIVIDENT(DEFAULT_BAURATE_DIVIDENT)
+    ) uart_loop_cbuff_inst (
         .CLK100MHZ(CLK100MHZ),
         .btn(btn),
         .sw(sw),
@@ -107,7 +112,7 @@ module top_cbuff_v2(
     );
 
     uart_wb #(
-        .UART_DIVISOR_W(10),
+        .UART_DIVISOR_W(8),
         .UART_DIVISOR_DEFAULT(1),
         .UART_STOP_BITS_DEFAULT(0)
     ) uart_inst (
@@ -126,7 +131,7 @@ module top_cbuff_v2(
     );
 
     // get uart status
-    reg top_uart_rx_status, top_uart_rx_status_toggle, top_uart_rx_data_ready, top_uart_wr_handle, top_uart_tx_busy_status;
+    reg top_uart_rx_status, top_uart_rx_data_ready, top_uart_wr_handle, top_uart_tx_busy_status;
 
     reg [7:0] top_uart_rx_data;
     wire top_uart_wr_handle_wire = (~top_uart_wr_handle & uart_tx_fifo_rd_cplt) & (~uart_inst_data_o[2]);
@@ -138,10 +143,11 @@ module top_cbuff_v2(
             top_uart_stb_i <= 1'b1;
 
             top_uart_rx_status <= 1'b0;
-            top_uart_rx_status_toggle <= 1'b0;
             top_uart_rx_data_ready <= 1'b0;
             top_uart_wr_handle <= 1'b0;
             top_uart_tx_busy_status <= 1'b0;
+            // top_uart_usr_wait_for_read_tx_busy <= 1'b0;
+
         end
         else if (is_default_config_ok)  begin
             if (top_uart_rx_data_ready && top_uart_addr_i == `UART_USR) begin
@@ -154,11 +160,12 @@ module top_cbuff_v2(
                     top_uart_we_i <= 1'b0;
                 end
                 else if (top_uart_addr_i == `UART_USR) begin
-                    top_uart_rx_status_toggle <= (~top_uart_rx_status_toggle & uart_inst_data_o[0]);
                     top_uart_rx_status <= uart_inst_data_o[0];
                     top_uart_tx_busy_status <= uart_inst_data_o[2];
 
                     top_uart_wr_handle <= top_uart_wr_handle_wire;
+                    // top_uart_usr_wait_for_read_tx_busy = top_uart_usr_wait_for_read_tx_busy ? 1'b0 : 
+                    //     top_uart_wr_handle ? 1'b1 : 1'b0;
 
                     if (uart_inst_data_o[0] && ~top_uart_wr_handle_wire) begin
                         top_uart_addr_i <= `UART_UDR;
@@ -168,6 +175,7 @@ module top_cbuff_v2(
                         top_uart_addr_i <= `UART_UDR;
                         top_uart_we_i <= 1'b1;
                         top_uart_data_i <= {24'b0, uart_tx_fifo_rdata_o};
+                        
                     end
                 end
                 else if ((top_uart_addr_i == `UART_UDR) && (~top_uart_we_i) && top_uart_rx_status && ~top_uart_rx_data_ready) begin
@@ -211,8 +219,13 @@ module top_cbuff_v2(
             uart_rx_fifo_wr_cplt <= 1'b0;
         end
         // else if (is_default_config_ok) begin
-        else if (top_uart_rx_data_ready && ~uart_rx_fifo_wr_cplt) begin
-            uart_rx_fifo_wdata_i <= top_uart_rx_data;
+        else if ((self_test_start || top_uart_rx_data_ready) && ~uart_rx_fifo_wr_cplt && ~uart_tx_fifo_full_o) begin
+            if (self_test_start) begin
+                uart_rx_fifo_wdata_i <= self_test_rx_fifo_data;
+            end
+            else begin
+                uart_rx_fifo_wdata_i <= top_uart_rx_data;
+            end
             uart_rx_fifo_wr_en_i <= 1'b1;
             uart_rx_fifo_wr_cplt <= 1'b1;
         end
@@ -272,12 +285,7 @@ module top_cbuff_v2(
                 uart_tx_fifo_wr_en_i <= 1'b0;
                 uart_tx_fifo_wr_cplt <= 1'b0;
             end
-            else if (uart_tx_fifo_wr_cplt) begin
-                // uart_tx_fifo_wdata_i <= commander_inst_tx_mem_data_reg;
-                uart_tx_fifo_wr_en_i <= 1'b0;
-                uart_tx_fifo_wr_cplt <= 1'b0;
-            end
-            else if (commander_inst_tx_mem_rd_cplt && ~uart_tx_fifo_wr_cplt) begin
+            else if (commander_inst_tx_mem_rd_cplt && ~uart_tx_fifo_wr_cplt && ~uart_tx_fifo_full_o) begin
                 uart_tx_fifo_wdata_i <= commander_inst_tx_mem_data_reg;
                 uart_tx_fifo_wr_en_i <= 1'b1;
                 uart_tx_fifo_wr_cplt <= 1'b1;
@@ -285,30 +293,31 @@ module top_cbuff_v2(
         end
     end
 
-    reg uart_rx_fifo_wr_cplt_toggle;
-    always @(posedge clk_i or posedge rst_i) begin
-        if (rst_i) begin
-            uart_rx_fifo_wr_cplt_toggle <= 1'b0;
-        end
-        else if (top_uart_rx_data_ready) begin
-            uart_rx_fifo_wr_cplt_toggle <= ~uart_rx_fifo_wr_cplt_toggle;
-        end
-    end
-
     //
     // read tx data from fifo
+    reg uart_tx_fifo_rd_first_byte;
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
             uart_tx_fifo_rd_cplt <= 1'b0;
+            uart_tx_fifo_rd_wait_for_cplt <= 1'b0;
+            uart_tx_fifo_rd_first_byte <= 1'b0;
         end else if (~uart_tx_fifo_empty_o && ~uart_tx_fifo_rd_cplt) begin
-            uart_tx_fifo_rd_en_i <= 1'b1;
+            uart_tx_fifo_rd_en_i <= 1'b1 & uart_tx_fifo_rd_first_byte;
             uart_tx_fifo_rd_cplt <= 1'b1;
+            uart_tx_fifo_rd_first_byte  <= 1'b1;
         end else if (uart_tx_fifo_rd_cplt) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
-            if ((top_uart_addr_i == `UART_UDR && top_uart_wr_handle) || uart_tx_fifo_empty_o) begin
+            if ((top_uart_addr_i == `UART_UDR && top_uart_wr_handle)) begin
                 uart_tx_fifo_rd_cplt <= 1'b0;
             end
+            // if (~uart_tx_fifo_rd_wait_for_cplt && top_uart_usr_wait_for_read_tx_busy) begin
+            //     uart_tx_fifo_rd_wait_for_cplt <= 1'b1;
+            // end
+            // else if (uart_tx_fifo_rd_wait_for_cplt && ~top_uart_usr_wait_for_read_tx_busy) begin
+            //     uart_tx_fifo_rd_cplt <= 1'b0;
+            //     uart_tx_fifo_rd_wait_for_cplt <= 1'b0;
+            // end
         end
     end
 
@@ -335,16 +344,6 @@ module top_cbuff_v2(
         end
     end
 
-    reg controller_inst_we_i_toggle;
-    always @(posedge controller_inst_we_i or posedge rst_i) begin
-        if (rst_i) begin
-            controller_inst_we_i_toggle <= 1'b0;
-        end
-        else begin
-            controller_inst_we_i_toggle <= ~controller_inst_we_i_toggle;
-        end
-    end
-    
     reg commander_inst_tx_mem_rd_e_i;
     wire [7:0] controller_inst_data_mem_o, controller_inst_data_addr_i;
     controller controller_inst (
@@ -365,6 +364,7 @@ module top_cbuff_v2(
     wire [7:0] commander_inst_tx_mem_data_o;
     output [64:0] commander_input_data_bus_o;
     input [16:0] commander_output_data_bus_i;
+    wire commander_inst_busy_o;
     commander commander_inst (
         .clk_i(clk_i),
         .rst_i(rst_i | btn[1]),
@@ -374,7 +374,7 @@ module top_cbuff_v2(
         .data_rd_i(controller_inst_data_mem_o),
         .tx_mem_rd_e_i(commander_inst_tx_mem_rd_e_i),
         // .data_rd_e_o(),
-        .busy_o(),
+        .busy_o(commander_inst_busy_o),
         .ack_data_rd_o(controller_inst_ack_data_rd_i),
         .output_data_bus_i(commander_output_data_bus_i),
         .data_rd_addr_o(controller_inst_data_addr_i),
@@ -391,7 +391,7 @@ module top_cbuff_v2(
             commander_inst_tx_mem_data_reg <= 8'b0;
             commander_inst_tx_mem_rd_e_i <= 1'b0;
         end
-        else if (~commander_inst_tx_mem_rd_cplt && ~commander_inst_tx_mem_empty_o) begin
+        else if (~commander_inst_tx_mem_rd_cplt && ~commander_inst_tx_mem_empty_o && ~uart_tx_fifo_full_o) begin
             commander_inst_tx_mem_rd_cplt <= 1'b1;
             commander_inst_tx_mem_data_reg <= commander_inst_tx_mem_data_o;
             commander_inst_tx_mem_rd_e_i <= 1'b1;
@@ -401,6 +401,224 @@ module top_cbuff_v2(
             commander_inst_tx_mem_rd_e_i <= 1'b0;
         end
     end
-    assign led = {controller_inst_finish_o, controller_inst_cmd==8'h00, commander_inst_tx_mem_empty_o, is_default_config_ok};
+
+    // reg self_test_enable;
+    // always @(posedge clk_i or posedge rst_i) begin
+    //     if (rst_i) begin
+    //         self_test_enable <= 1'b0;
+    //     end
+    //     else if (btn[2]) begin
+    //         self_test_enable <= 1'b1;
+    //     end
+    // end
+
+    //
+
+    integer ii;
+    genvar jj;
+
+    reg [2:0] self_test_test_status;
+    reg [0:0] self_test_all_success_status[0:9];
+    wire [9:0] self_test_all_success_status_flatten;
+    for (jj = 0; jj < 10; jj=jj+1) begin
+        assign self_test_all_success_status_flatten[jj] = self_test_all_success_status[jj];
+    end
+    wire is_self_test_ok = (&self_test_all_success_status_flatten);
+    // wire is_self_test_ok = self_test_all_success_status_flatten[0];
+
+    reg self_test_start;
+    reg [7:0] self_test_rx_fifo_data;
+
+    //
+    wire [15:0] self_test_input_data_a[0:9];
+    assign self_test_input_data_a[0] = 16'b0011100010100110;
+    assign self_test_input_data_a[1] = 16'b1011001100011110;
+    assign self_test_input_data_a[2] = 16'b1011101101001011;
+    assign self_test_input_data_a[3] = 16'b1011101111011010;
+    assign self_test_input_data_a[4] = 16'b1011101010011110;
+    assign self_test_input_data_a[5] = 16'b1011000110110010;
+    assign self_test_input_data_a[6] = 16'b0011100010111100;
+    assign self_test_input_data_a[7] = 16'b1010100000001011;
+    assign self_test_input_data_a[8] = 16'b0011100110111011;
+    assign self_test_input_data_a[9] = 16'b0010110011001000;
+
+    wire [15:0] self_test_input_data_b[0:9];
+    assign self_test_input_data_b[0] = 16'b0011000111110000;
+    assign self_test_input_data_b[1] = 16'b1011100000111101;
+    assign self_test_input_data_b[2] = 16'b0011100100101010;
+    assign self_test_input_data_b[3] = 16'b0010001000010001;
+    assign self_test_input_data_b[4] = 16'b1011011000110000;
+    assign self_test_input_data_b[5] = 16'b1001110111110111;
+    assign self_test_input_data_b[6] = 16'b0011000111001111;
+    assign self_test_input_data_b[7] = 16'b1011011111010001;
+    assign self_test_input_data_b[8] = 16'b1011001010110001;
+    assign self_test_input_data_b[9] = 16'b0011010011010100;
+
+    wire [15:0] self_test_input_data_c[0:9];
+    assign self_test_input_data_c[0] = 16'b0011100110010000;
+    assign self_test_input_data_c[1] = 16'b0011010111000101;
+    assign self_test_input_data_c[2] = 16'b1010111111010101;
+    assign self_test_input_data_c[3] = 16'b0011101100100100;
+    assign self_test_input_data_c[4] = 16'b1011100110011100;
+    assign self_test_input_data_c[5] = 16'b1011011011011010;
+    assign self_test_input_data_c[6] = 16'b1011101111110100;
+    assign self_test_input_data_c[7] = 16'b1011100101101111;
+    assign self_test_input_data_c[8] = 16'b1011001111111000;
+    assign self_test_input_data_c[9] = 16'b1011100110000111;
+
+    wire [15:0] self_test_output_ref [0:9];
+    assign self_test_output_ref[0] = 16'b0011101001101101;
+    assign self_test_output_ref[1] = 16'b0011011110101000;
+    assign self_test_output_ref[2] = 16'b1011100110110000;
+    assign self_test_output_ref[3] = 16'b0011101100001100;
+    assign self_test_output_ref[4] = 16'b1011011000011010;
+    assign self_test_output_ref[5] = 16'b1011011011010110;
+    assign self_test_output_ref[6] = 16'b1011101100011000;
+    assign self_test_output_ref[7] = 16'b1011100101001111;
+    assign self_test_output_ref[8] = 16'b1011011001100001;
+    assign self_test_output_ref[9] = 16'b1011100101011001;
+
+    reg [3:0] self_test_testcase_cnt, self_test_txbyte_cnt;
+    always @(posedge clk_i or posedge rst_i) begin
+        if (rst_i) begin
+            // is_self_test_ok <= 1'b0;
+            self_test_rx_fifo_data <= 1'b0;
+            self_test_txbyte_cnt <= 1'b0;
+            self_test_start <= 1'b0;
+        end
+        else if (~uart_rx_fifo_wr_cplt && ~is_self_test_ok && ~uart_tx_fifo_full_o) begin
+            if (is_default_config_ok && ~self_test_start && ~(|self_test_test_status)) begin
+                self_test_start <= 1'b1;
+
+                // self_test_testcase_cnt <= 1'b1;
+                self_test_txbyte_cnt <= 4'd1;
+                self_test_rx_fifo_data <= 8'hab;
+            end
+            else if (self_test_txbyte_cnt == 4'd1) begin
+                self_test_txbyte_cnt <= 4'd2;
+                self_test_rx_fifo_data <= 8'hcd;
+            end
+            else if (self_test_txbyte_cnt == 4'd2) begin
+                self_test_txbyte_cnt <= 4'd3;
+                self_test_rx_fifo_data <= 8'h1;
+            end
+            else if (self_test_txbyte_cnt == 4'd3) begin
+                self_test_txbyte_cnt <= 4'd4;
+                self_test_rx_fifo_data <= 8'h9;
+            end
+            //
+            else if (self_test_txbyte_cnt == 4'd4) begin
+                self_test_txbyte_cnt <= 4'd5;
+                self_test_rx_fifo_data <= self_test_input_data_a[self_test_testcase_cnt][15:8];
+            end
+            else if (self_test_txbyte_cnt == 4'd5) begin
+                self_test_txbyte_cnt <= 4'd6;
+                self_test_rx_fifo_data <= self_test_input_data_a[self_test_testcase_cnt][7:0];
+            end
+            else if (self_test_txbyte_cnt == 4'd6) begin
+                self_test_txbyte_cnt <= 4'd7;
+                self_test_rx_fifo_data <= self_test_input_data_b[self_test_testcase_cnt][15:8];
+            end
+            else if (self_test_txbyte_cnt == 4'd7) begin
+                self_test_txbyte_cnt <= 4'd8;
+                self_test_rx_fifo_data <= self_test_input_data_b[self_test_testcase_cnt][7:0];
+            end
+            else if (self_test_txbyte_cnt == 4'd8) begin
+                self_test_txbyte_cnt <= 4'd9;
+                self_test_rx_fifo_data <= self_test_input_data_c[self_test_testcase_cnt][15:8];
+            end
+            else if (self_test_txbyte_cnt == 4'd9) begin
+                self_test_txbyte_cnt <= 4'd10;
+                self_test_rx_fifo_data <= self_test_input_data_c[self_test_testcase_cnt][7:0];
+            end
+            else if (self_test_txbyte_cnt == 4'd10) begin
+                self_test_txbyte_cnt <= 4'd11;
+                self_test_rx_fifo_data <= self_test_output_ref[self_test_testcase_cnt][15:8];
+            end
+            else if (self_test_txbyte_cnt == 4'd11) begin
+                self_test_txbyte_cnt <= 4'd12;
+                self_test_rx_fifo_data <= self_test_output_ref[self_test_testcase_cnt][7:0];
+            end
+            else if (self_test_txbyte_cnt == 4'd12) begin
+                self_test_txbyte_cnt <= 4'd13;
+                self_test_rx_fifo_data <= 1'b1;
+            end
+            else if (self_test_txbyte_cnt == 4'd13) begin
+                self_test_txbyte_cnt <= 4'd14;
+                self_test_rx_fifo_data <= 8'hab;
+            end
+            else if (self_test_txbyte_cnt == 4'd14) begin
+                self_test_txbyte_cnt <= 4'd15;
+                self_test_rx_fifo_data <= 8'hcd;
+            end
+            else if (self_test_txbyte_cnt == 4'd15) begin
+                self_test_txbyte_cnt <= 4'd0;
+                // is_self_test_ok <= 1'b1;
+                self_test_start <= 1'b0;
+            end
+        end
+    end
+
+    always @(posedge clk_i or posedge rst_i) begin
+        if (rst_i) begin
+            self_test_testcase_cnt <= 1'b0;
+        end
+        else if (self_test_testcase_cnt == 4'd10) begin
+            self_test_testcase_cnt <= 1'b0;
+        end
+        else if (self_test_test_status == 4'd4) begin
+            self_test_testcase_cnt <= self_test_testcase_cnt + 1'b1;
+        end
+    end
+
+    //
+
+    always @(posedge clk_i or posedge rst_i) begin
+        if (rst_i) begin
+            self_test_test_status <= 1'b0;
+            // self_test_all_success_status <= 1'b0;
+            for (ii = 0;ii < 10 ; ii=ii+1) begin
+                self_test_all_success_status[ii] <= 1'b0;
+            end
+        end
+        else if (self_test_start && ~(|self_test_test_status)) begin // test_status wait for start end
+            self_test_test_status <= 4'd1;
+        end
+        else if (self_test_test_status == 4'd1 && ~self_test_start) begin // test_status wait for busy signal from commander
+            self_test_test_status <= 4'd2;
+        end
+        else if (self_test_test_status == 4'd2 && commander_inst_busy_o) begin // test_status wait for busy signal from commander
+            self_test_test_status <= 4'd3;
+        end
+        else if (self_test_test_status == 4'd3 && ~commander_inst_busy_o) begin // test_status detects busy signal is end
+            self_test_test_status <= 4'd4;
+        end
+        else if (self_test_test_status == 4'd4) begin
+            self_test_test_status <= 4'd0;
+            self_test_all_success_status[self_test_testcase_cnt] <= (self_test_output_ref[self_test_testcase_cnt] == commander_output_data_bus_i[15:0] || 
+            self_test_output_ref[self_test_testcase_cnt] == (1'b1 + commander_output_data_bus_i[15:0]) || 
+            self_test_output_ref[self_test_testcase_cnt] == (commander_output_data_bus_i[15:0] - 1'b1));
+        end
+    end
+
+    reg commander_busy_toggle;
+    always @(posedge commander_inst_busy_o or posedge rst_i) begin
+        if (rst_i) begin
+            commander_busy_toggle <= 1'b0;
+        end
+        else
+            commander_busy_toggle <= ~commander_inst_busy_o;
+    end
+
+    reg controller_inst_finish_o_toggle;
+    always @(posedge controller_inst_finish_o or posedge rst_i) begin
+        if (rst_i) begin
+            controller_inst_finish_o_toggle <= 1'b0;
+        end
+        else
+            controller_inst_finish_o_toggle <= ~controller_inst_finish_o_toggle;
+    end
+    
+    assign led = {controller_inst_finish_o_toggle, commander_busy_toggle, is_self_test_ok, is_default_config_ok};
 
 endmodule

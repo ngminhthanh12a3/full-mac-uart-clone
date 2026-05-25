@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "./uart_regs_defs.v"
+`include "../imports/rtl/uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -21,18 +21,21 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module uart_loop_cbuff(
-    CLK100MHZ,
-    btn,
-    sw,
-    // led,
-    is_default_config_ok_o,
-    uart_pin_ack_o,
-    uart_pin_stb_i,
-    uart_pin_we_i,
-    uart_pin_addr_i,
-    uart_pin_data_i,
-    uart_pin_data_o
+module uart_loop_cbuff #(
+        parameter DEFAULT_BAURATE_DIVIDENT = 8'hd0
+    )
+    (
+        CLK100MHZ,
+        btn,
+        sw,
+        // led,
+        is_default_config_ok_o,
+        uart_pin_ack_o,
+        uart_pin_stb_i,
+        uart_pin_we_i,
+        uart_pin_addr_i,
+        uart_pin_data_i,
+        uart_pin_data_o
     );
     input CLK100MHZ;
     input [0:0] btn;
@@ -124,7 +127,7 @@ module uart_loop_cbuff(
     wire [31:0] data_o = uart_pin_data_o;
     reg uart_rx_status;
 
-    wire [19:0] DEFAULT_UART_CFG = {4'he,8'b0, {8'hd0 + sw[3:0]}}; // stop bit = 1, divisor = 0xd0 + sw[3:0]
+    wire [19:0] DEFAULT_UART_CFG = {4'he,8'b0, {DEFAULT_BAURATE_DIVIDENT + sw[3:0]}}; // stop bit = 1, divisor = 0xd0 + sw[3:0]
     
     wire is_ack_o_or_cnt_full = ack_o || ((phase_cnt + 1'b1) == 1'b0);
 
