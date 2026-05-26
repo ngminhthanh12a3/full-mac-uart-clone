@@ -29,7 +29,8 @@ module top_uart_mac_protocol #(
     led,
     uart_rxd_out,
     uart_txd_in,
-    sw
+    sw,
+    db_uart_tx_shift_reg_q
     );
     input CLK100MHZ, uart_txd_in;
     input [1:0] btn;
@@ -37,7 +38,8 @@ module top_uart_mac_protocol #(
 
     output uart_rxd_out;
     output [3:0] led;
-    
+    output [7:0] db_uart_tx_shift_reg_q;
+
     // mac_unit
     wire [15:0] mac_out;
     wire mac_error;
@@ -55,7 +57,8 @@ module top_uart_mac_protocol #(
         .uart_txd_in(uart_txd_in),
         .sw(sw),
         .commander_input_data_bus_o(commander_input_data_bus_o),
-        .commander_output_data_bus_i(commander_output_data_bus_i)
+        .commander_output_data_bus_i(commander_output_data_bus_i),
+        .db_uart_tx_shift_reg_q(db_uart_tx_shift_reg_q)
     );
 
     mac_unit mac_unit_inst (

@@ -64,7 +64,8 @@ module uart_wb
     input               we_i,
     input               stb_i,
     output              ack_o,
-    output              uart_tx_busy_o
+    output              uart_tx_busy_o,
+    output [7:0] db_uart_tx_shift_reg_q
 );
 
 //-----------------------------------------------------------------
@@ -114,7 +115,8 @@ u_uart
 
     // UART pins
     .rxd_i(rx_i),
-    .txd_o(tx_o)
+    .txd_o(tx_o),
+    .db_uart_tx_shift_reg_q(db_uart_tx_shift_reg_q)
 );
 
 //-----------------------------------------------------------------

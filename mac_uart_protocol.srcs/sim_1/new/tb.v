@@ -34,10 +34,10 @@ module tb(
     reg uart_txd_in;
     wire uart_rxd_out;
     reg rst;
-    wire [2:0] btn = {1'b1, 1'b0, rst};
+    wire [1:0] btn = {1'b0, rst};
     reg [3:0] sw;
 
-    top_uart_mac_protocol #(.DEFAULT_BAURATE_DIVIDENT(8'd1)) dut(
+    top_uart_mac_protocol #(.DEFAULT_BAURATE_DIVIDENT(8'd0)) dut(
         .CLK100MHZ(clk),
         .btn(btn),
         .led(led),
@@ -91,5 +91,9 @@ module tb(
 
         init_sim();
         reset_dut();
+
+		wait (led[1] == 1'b1);
+
+		$finish;
     end
 endmodule

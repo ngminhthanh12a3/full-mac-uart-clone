@@ -32,7 +32,8 @@ module top_cbuff_v2 #(
     sw,
     //
     commander_output_data_bus_i,
-    commander_input_data_bus_o
+    commander_input_data_bus_o,
+    db_uart_tx_shift_reg_q
     );
     input CLK100MHZ, uart_txd_in;
     input [1:0] btn;
@@ -40,6 +41,7 @@ module top_cbuff_v2 #(
 
     output uart_rxd_out;
     output [3:0] led;
+    output [7:0] db_uart_tx_shift_reg_q;
 
     wire clk_i = CLK100MHZ, rst_i = btn[0];
 
@@ -67,7 +69,7 @@ module top_cbuff_v2 #(
     wire [31:0] uart_inst_data_o;
     wire [7:0] uart_inst_addr_i = is_default_config_ok ? top_uart_addr_i : uart_loop_addr_i;
     wire [31:0] uart_inst_data_i = is_default_config_ok ? top_uart_data_i : uart_loop_data_i;
-    wire uart_inst_we_i = is_default_config_ok ? top_uart_we_i : uart_loop_we_i;
+    wire uart_inst_we_i = is_default_config_ok ? (top_uart_we_i && top_uart_addr_i == `UART_UDR) : uart_loop_we_i;
     wire uart_inst_stb_i = is_default_config_ok ? top_uart_stb_i : uart_loop_stb_i;
     wire uart_inst_uart_tx_busy_o;
 
@@ -127,7 +129,8 @@ module top_cbuff_v2 #(
         .we_i(uart_inst_we_i), // Connect Wishbone write enable
         .stb_i(uart_inst_stb_i), // Connect Wishbone strobe
         .ack_o(uart_inst_ack_o),  // Connect Wishbone acknowledge output
-        .uart_tx_busy_o(uart_inst_uart_tx_busy_o)
+        .uart_tx_busy_o(uart_inst_uart_tx_busy_o),
+        .db_uart_tx_shift_reg_q(db_uart_tx_shift_reg_q)
     );
 
     // get uart status
@@ -174,7 +177,7 @@ module top_cbuff_v2 #(
                     else if (top_uart_wr_handle_wire) begin
                         top_uart_addr_i <= `UART_UDR;
                         top_uart_we_i <= 1'b1;
-                        top_uart_data_i <= {24'b0, uart_tx_fifo_rdata_o};
+                        top_uart_data_i <= {24'b0, uart_tx_fifo_rdata_o_reg};
                         
                     end
                 end
@@ -275,6 +278,7 @@ module top_cbuff_v2 #(
 
     // tx ff fifo write control
     always @(posedge clk_i or posedge rst_i) begin
+    // always @(clk_i or rst_i) begin
         if (rst_i) begin
             uart_tx_fifo_wdata_i <= 8'b0;
             uart_tx_fifo_wr_en_i <= 1'b0;
@@ -295,17 +299,17 @@ module top_cbuff_v2 #(
 
     //
     // read tx data from fifo
-    reg uart_tx_fifo_rd_first_byte;
+    reg [7:0] uart_tx_fifo_rdata_o_reg;
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
             uart_tx_fifo_rd_cplt <= 1'b0;
             uart_tx_fifo_rd_wait_for_cplt <= 1'b0;
-            uart_tx_fifo_rd_first_byte <= 1'b0;
+            uart_tx_fifo_rdata_o_reg <= 1'b0;
         end else if (~uart_tx_fifo_empty_o && ~uart_tx_fifo_rd_cplt) begin
-            uart_tx_fifo_rd_en_i <= 1'b1 & uart_tx_fifo_rd_first_byte;
+            uart_tx_fifo_rd_en_i <= 1'b1;
             uart_tx_fifo_rd_cplt <= 1'b1;
-            uart_tx_fifo_rd_first_byte  <= 1'b1;
+            uart_tx_fifo_rdata_o_reg <= uart_tx_fifo_rdata_o;
         end else if (uart_tx_fifo_rd_cplt) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
             if ((top_uart_addr_i == `UART_UDR && top_uart_wr_handle)) begin
@@ -384,7 +388,6 @@ module top_cbuff_v2 #(
         .input_data_bus_o(commander_input_data_bus_o)
     );
 
-    
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             commander_inst_tx_mem_rd_cplt <= 1'b0;
@@ -397,7 +400,7 @@ module top_cbuff_v2 #(
             commander_inst_tx_mem_rd_e_i <= 1'b1;
         end
         else if (commander_inst_tx_mem_rd_cplt) begin
-            commander_inst_tx_mem_rd_cplt <= 1'b0;
+            commander_inst_tx_mem_rd_cplt <= ~uart_tx_fifo_wr_cplt;
             commander_inst_tx_mem_rd_e_i <= 1'b0;
         end
     end

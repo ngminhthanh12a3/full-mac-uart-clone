@@ -1,0 +1,6 @@
+0.7
+2020.2
+Nov 14 2025
+12:36:23
+/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.sim/sim_1/synth/func/xsim/tb_func_synth.v,1779760931,verilog,,/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.srcs/sim_1/new/tb.v,,commander;controller;fifo;fifo_0;fifo__parameterized0;glbl;int_fp_add;int_fp_mul;mac_unit;mul16x16;top_cbuff_v2;top_uart_mac_protocol;uart;uart_loop_cbuff;uart_regs;uart_wb,,,../../../../../../../FPGAXilinx/2025.2/data/rsb/busdef,,,,,
+/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.srcs/sim_1/new/tb.v,1779760002,verilog,,,,tb,,,../../../../../../../FPGAXilinx/2025.2/data/rsb/busdef,,,,,

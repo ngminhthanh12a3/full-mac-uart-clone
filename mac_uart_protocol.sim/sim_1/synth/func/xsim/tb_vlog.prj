@@ -1,0 +1,7 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../../../../FPGAXilinx/2025.2/data/rsb/busdef" \
+"tb_func_synth.v" \
+"../../../../../mac_uart_protocol.srcs/sim_1/new/tb.v" \
+
+# Do not sort compile order
+nosort

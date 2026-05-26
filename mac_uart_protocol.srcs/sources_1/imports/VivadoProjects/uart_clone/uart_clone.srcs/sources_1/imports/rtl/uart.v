@@ -66,7 +66,8 @@ module uart
 
     // UART pins
     input         rxd_i,
-    output        txd_o
+    output        txd_o,
+    output [7:0] db_uart_tx_shift_reg_q
 );
 
 //-----------------------------------------------------------------
@@ -341,5 +342,5 @@ assign rx_ready_o = rx_ready_q;
 assign txd_o      = txd_q;
 assign data_o     = rx_data_q;
 assign rx_err_o   = rx_err_q;
-
+assign db_uart_tx_shift_reg_q = tx_shift_reg_q;
 endmodule
