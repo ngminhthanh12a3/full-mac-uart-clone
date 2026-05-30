@@ -67,8 +67,12 @@ module uart
     // UART pins
     input         rxd_i,
     output        txd_o,
-    output [7:0] db_uart_tx_shift_reg_q
+    output [7:0] db_uart_tx_shift_reg_q,
+    output db_internal_rxd_i,
+    output db_internal_txd_o
 );
+assign db_internal_rxd_i = rxd_i;
+assign db_internal_txd_o = txd_o;
 
 //-----------------------------------------------------------------
 // Registers

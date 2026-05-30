@@ -28,7 +28,7 @@
 // USA
 //-----------------------------------------------------------------
 
-`include "uart_regs_defs.v"
+`include "/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.srcs/sources_1/imports/VivadoProjects/uart_clone/uart_clone.srcs/sources_1/imports/rtl/uart_regs_defs.v"
 
 //-----------------------------------------------------------------
 // Module:  Auto generated register interface

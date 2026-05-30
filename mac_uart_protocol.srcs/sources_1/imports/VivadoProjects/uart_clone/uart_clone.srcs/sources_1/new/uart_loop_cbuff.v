@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../imports/rtl/uart_regs_defs.v"
+`include "/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.srcs/sources_1/imports/VivadoProjects/uart_clone/uart_clone.srcs/sources_1/imports/rtl/uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -70,6 +70,9 @@ module uart_loop_cbuff #(
     reg [PHASE_STATE_LENGTH-1:0] phase_state_cnt;
     reg [PHASE_STAGE_LENGTH:0] phase_stage;
     
+    // reg [0:0] phase_is_start;
+    reg [((2**PHASE_STATE_LENGTH)-1):0] phase_is_end;
+
     always @(
         posedge clk_i or posedge rst_i
     ) begin
@@ -113,10 +116,6 @@ module uart_loop_cbuff #(
         else if (phase_cnt_start_to_count)
             phase_cnt <= phase_cnt + 1'b1;  
     end
-
-    //
-    // reg [0:0] phase_is_start;
-    reg [((2**PHASE_STATE_LENGTH)-1):0] phase_is_end;
 
     //
     reg we_i, stb_i;

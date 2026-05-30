@@ -37,13 +37,15 @@ module tb(
     wire [1:0] btn = {1'b0, rst};
     reg [3:0] sw;
 
-    top_uart_mac_protocol #(.DEFAULT_BAURATE_DIVIDENT(8'd0)) dut(
-        .CLK100MHZ(clk),
-        .btn(btn),
-        .led(led),
-        .uart_rxd_out(uart_rxd_out),
-        .uart_txd_in(uart_txd_in),
-        .sw(sw)
+    top_uart_mac_protocol
+   // #(.DEFAULT_BAURATE_DIVIDENT(8'd0)) 
+    dut(
+        .MT_CLK100MHZ(clk),
+        .MT_btn(btn),
+        .MT_led(led),
+        .MT_uart_rxd_out(uart_rxd_out),
+        .MT_uart_txd_in(uart_txd_in),
+        .MT_sw(sw)
     );
 
     //----------------------------------------------------------------
@@ -93,7 +95,7 @@ module tb(
         reset_dut();
 
 		wait (led[1] == 1'b1);
-
+		#50;
 		$finish;
     end
 endmodule

@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../imports/rtl/uart_regs_defs.v"
+`include "/home/thanh/VivadoProjects/mac_uart_protocol/mac_uart_protocol.srcs/sources_1/imports/VivadoProjects/uart_clone/uart_clone.srcs/sources_1/imports/rtl/uart_regs_defs.v"
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -33,7 +33,11 @@ module top_cbuff_v2 #(
     //
     commander_output_data_bus_i,
     commander_input_data_bus_o,
-    db_uart_tx_shift_reg_q
+    db_uart_tx_shift_reg_q,
+    db_uart_rx_fifo_wdata_i,
+    db_uart_rx_fifo_wr_en_i,
+    db_internal_rxd_i,
+    db_internal_txd_o
     );
     input CLK100MHZ, uart_txd_in;
     input [1:0] btn;
@@ -41,7 +45,12 @@ module top_cbuff_v2 #(
 
     output uart_rxd_out;
     output [3:0] led;
+    output [64:0] commander_input_data_bus_o;
     output [7:0] db_uart_tx_shift_reg_q;
+    output [7:0] db_uart_rx_fifo_wdata_i;
+    output db_uart_rx_fifo_wr_en_i;
+    output db_internal_rxd_i;
+    output db_internal_txd_o;
 
     wire clk_i = CLK100MHZ, rst_i = btn[0];
 
@@ -56,6 +65,18 @@ module top_cbuff_v2 #(
     wire [31:0] uart_loop_data_i;
     wire uart_loop_we_i;
     wire uart_loop_stb_i;
+
+    // self test
+    integer ii;
+    genvar jj;
+    reg [2:0] self_test_test_status;
+    reg [0:0] self_test_all_success_status[0:9];
+    wire [9:0] self_test_all_success_status_flatten;
+    for (jj = 0; jj < 10; jj=jj+1) begin
+        assign self_test_all_success_status_flatten[jj] = self_test_all_success_status[jj];
+    end
+    wire is_self_test_ok = (&self_test_all_success_status_flatten);
+    // wire is_self_test_ok = self_test_all_success_status_flatten[0];
 
     //
     wire is_default_config_ok;
@@ -81,6 +102,7 @@ module top_cbuff_v2 #(
     reg uart_tx_fifo_wr_en_i, uart_tx_fifo_rd_en_i;
     wire uart_tx_fifo_full_o, uart_tx_fifo_empty_o;
     wire [7:0] uart_tx_fifo_rdata_o;
+    reg [7:0] uart_tx_fifo_rdata_o_reg;
 
     //
     // reg [7:0] uart_tx_fifo_wdata_i;
@@ -96,6 +118,11 @@ module top_cbuff_v2 #(
     
     reg commander_inst_tx_mem_rd_cplt;
     reg [7:0] commander_inst_tx_mem_data_reg;
+    
+    //
+
+    reg [7:0] self_test_rx_fifo_data;
+    reg self_test_start;
     
     uart_loop_cbuff #(
         .DEFAULT_BAURATE_DIVIDENT(DEFAULT_BAURATE_DIVIDENT)
@@ -130,7 +157,9 @@ module top_cbuff_v2 #(
         .stb_i(uart_inst_stb_i), // Connect Wishbone strobe
         .ack_o(uart_inst_ack_o),  // Connect Wishbone acknowledge output
         .uart_tx_busy_o(uart_inst_uart_tx_busy_o),
-        .db_uart_tx_shift_reg_q(db_uart_tx_shift_reg_q)
+        .db_uart_tx_shift_reg_q(db_uart_tx_shift_reg_q),
+        .db_internal_rxd_i(db_internal_rxd_i),
+        .db_internal_txd_o(db_internal_txd_o)
     );
 
     // get uart status
@@ -196,6 +225,9 @@ module top_cbuff_v2 #(
     reg uart_rx_fifo_wr_en_i, uart_rx_fifo_rd_en_i;
     wire uart_rx_fifo_full_o, uart_rx_fifo_empty_o;
     wire [7:0] uart_rx_fifo_rdata_o;
+
+    assign db_uart_rx_fifo_wdata_i = uart_rx_fifo_wdata_i;
+    assign db_uart_rx_fifo_wr_en_i = uart_rx_fifo_wr_en_i;
 
     //
     reg uart_rx_fifo_wr_cplt;
@@ -299,7 +331,6 @@ module top_cbuff_v2 #(
 
     //
     // read tx data from fifo
-    reg [7:0] uart_tx_fifo_rdata_o_reg;
     always @(posedge clk_i or posedge rst_i) begin
         if (rst_i) begin
             uart_tx_fifo_rd_en_i <= 1'b0;
@@ -366,7 +397,6 @@ module top_cbuff_v2 #(
 
     wire commander_inst_tx_mem_empty_o;
     wire [7:0] commander_inst_tx_mem_data_o;
-    output [64:0] commander_input_data_bus_o;
     input [16:0] commander_output_data_bus_i;
     wire commander_inst_busy_o;
     commander commander_inst (
@@ -414,23 +444,6 @@ module top_cbuff_v2 #(
     //         self_test_enable <= 1'b1;
     //     end
     // end
-
-    //
-
-    integer ii;
-    genvar jj;
-
-    reg [2:0] self_test_test_status;
-    reg [0:0] self_test_all_success_status[0:9];
-    wire [9:0] self_test_all_success_status_flatten;
-    for (jj = 0; jj < 10; jj=jj+1) begin
-        assign self_test_all_success_status_flatten[jj] = self_test_all_success_status[jj];
-    end
-    wire is_self_test_ok = (&self_test_all_success_status_flatten);
-    // wire is_self_test_ok = self_test_all_success_status_flatten[0];
-
-    reg self_test_start;
-    reg [7:0] self_test_rx_fifo_data;
 
     //
     wire [15:0] self_test_input_data_a[0:9];

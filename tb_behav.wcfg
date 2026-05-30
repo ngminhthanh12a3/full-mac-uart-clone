@@ -12,44 +12,48 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0 ps"></ZoomStartTime>
-      <ZoomEndTime time="91 ps"></ZoomEndTime>
+      <ZoomEndTime time="118 ps"></ZoomEndTime>
       <Cursor1Time time="310 ps"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="161"></NameColumnWidth>
-      <ValueColumnWidth column_width="102"></ValueColumnWidth>
+      <ValueColumnWidth column_width="98"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="8" />
-   <wvobject type="logic" fp_name="/tb/dut/CLK100MHZ">
-      <obj_property name="ElementShortName">CLK100MHZ</obj_property>
-      <obj_property name="ObjectShortName">CLK100MHZ</obj_property>
+   <WVObjectSize size="9" />
+   <wvobject type="logic" fp_name="/tb/dut/MT_CLK100MHZ">
+      <obj_property name="ElementShortName">MT_CLK100MHZ</obj_property>
+      <obj_property name="ObjectShortName">MT_CLK100MHZ</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/tb/btn">
-      <obj_property name="ElementShortName">btn[1:0]</obj_property>
-      <obj_property name="ObjectShortName">btn[1:0]</obj_property>
+   <wvobject type="logic" fp_name="/tb/dut/MT_uart_txd_in">
+      <obj_property name="ElementShortName">MT_uart_txd_in</obj_property>
+      <obj_property name="ObjectShortName">MT_uart_txd_in</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/tb/led">
-      <obj_property name="ElementShortName">led[3:0]</obj_property>
-      <obj_property name="ObjectShortName">led[3:0]</obj_property>
+   <wvobject type="logic" fp_name="/tb/dut/MT_uart_rxd_out">
+      <obj_property name="ElementShortName">MT_uart_rxd_out</obj_property>
+      <obj_property name="ObjectShortName">MT_uart_rxd_out</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/tb/uart_txd_in">
-      <obj_property name="ElementShortName">uart_txd_in</obj_property>
-      <obj_property name="ObjectShortName">uart_txd_in</obj_property>
+   <wvobject type="array" fp_name="/tb/dut/MT_led">
+      <obj_property name="ElementShortName">MT_led[3:0]</obj_property>
+      <obj_property name="ObjectShortName">MT_led[3:0]</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/tb/uart_rxd_out">
-      <obj_property name="ElementShortName">uart_rxd_out</obj_property>
-      <obj_property name="ObjectShortName">uart_rxd_out</obj_property>
+   <wvobject type="array" fp_name="/tb/dut/MT_db_uart_tx_shift_reg_q">
+      <obj_property name="ElementShortName">MT_db_uart_tx_shift_reg_q[7:0]</obj_property>
+      <obj_property name="ObjectShortName">MT_db_uart_tx_shift_reg_q[7:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/tb/sw">
-      <obj_property name="ElementShortName">sw[3:0]</obj_property>
-      <obj_property name="ObjectShortName">sw[3:0]</obj_property>
+   <wvobject type="array" fp_name="/tb/dut/MT_db_uart_rx_fifo_wdata_i">
+      <obj_property name="ElementShortName">MT_db_uart_rx_fifo_wdata_i[7:0]</obj_property>
+      <obj_property name="ObjectShortName">MT_db_uart_rx_fifo_wdata_i[7:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/tb/dut/top_cbuff_v2_inst/uart_inst/u_uart/tx_shift_reg_q">
-      <obj_property name="ElementShortName">tx_shift_reg_q[7:0]</obj_property>
-      <obj_property name="ObjectShortName">tx_shift_reg_q[7:0]</obj_property>
+   <wvobject type="logic" fp_name="/tb/dut/MT_db_uart_rx_fifo_wr_en_i">
+      <obj_property name="ElementShortName">MT_db_uart_rx_fifo_wr_en_i</obj_property>
+      <obj_property name="ObjectShortName">MT_db_uart_rx_fifo_wr_en_i</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/tb/dut/db_uart_tx_shift_reg_q">
-      <obj_property name="ElementShortName">db_uart_tx_shift_reg_q[7:0]</obj_property>
-      <obj_property name="ObjectShortName">db_uart_tx_shift_reg_q[7:0]</obj_property>
+   <wvobject type="logic" fp_name="/tb/dut/MT_db_internal_rxd_i">
+      <obj_property name="ElementShortName">MT_db_internal_rxd_i</obj_property>
+      <obj_property name="ObjectShortName">MT_db_internal_rxd_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/tb/dut/MT_db_internal_txd_o">
+      <obj_property name="ElementShortName">MT_db_internal_txd_o</obj_property>
+      <obj_property name="ObjectShortName">MT_db_internal_txd_o</obj_property>
    </wvobject>
 </wave_config>
