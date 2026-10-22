@@ -1,0 +1,1 @@
+/home/thanh/miniconda3/envs/pyserial/bin/python fulltest_96-byte-data_mac.py

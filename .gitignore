@@ -103,3 +103,4 @@
 */*/*/bd/*/ip/*/*.tcl
 hw_handoff
 ipshared
+serial_end/keithley_core_*.csv
